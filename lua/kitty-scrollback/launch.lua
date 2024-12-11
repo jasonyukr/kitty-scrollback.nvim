@@ -128,7 +128,7 @@ local function set_options()
 
   -- preferred optional opts
   vim.opt.shortmess:append('AI') -- no existing swap file or intro message
-  vim.o.laststatus = 0
+  vim.o.laststatus = 2
   vim.o.scrolloff = 0
   vim.o.cmdheight = 0
   vim.o.ruler = false
@@ -147,7 +147,7 @@ local function set_options()
   vim.o.lazyredraw = false -- conflicts with noice
   vim.o.hidden = true
   vim.o.modifiable = true
-  vim.o.wrap = false
+  vim.o.wrap = true
   vim.o.report = 999999 -- arbitrary large number to hide yank messages
 
   -- not necessary to set vim.o.showtabline because tab offset is taken into account during positioning
@@ -176,7 +176,8 @@ local set_cursor_position = vim.schedule_wrap(function(d)
   local orig_scrolloff = vim.o.scrolloff
   local orig_laststatus = vim.o.laststatus
   vim.o.scrolloff = 0
-  vim.o.laststatus = 0
+  vim.o.laststatus = 2
+  vim.o.wrap = true
   vim.o.virtualedit = 'all'
   ---@diagnostic disable-next-line: param-type-mismatch
   vim.fn.cursor(last_line, 1) -- cursor last line
