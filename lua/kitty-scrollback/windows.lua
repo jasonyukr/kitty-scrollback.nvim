@@ -72,7 +72,7 @@ M.open_paste_window = function(start_insert)
   vim.cmd.stopinsert()
 
   if not p.pos then
-    if opts.kitty_get_text.extent == 'screen' or opts.kitty_get_text.extent == 'all' then
+    if opts.kitty_get_text.extent == 'screen' or opts.kitty_get_text.extent == 'all' or opts.kitty_get_text.extent == 'bottom' then
       vim.notify(
         'kitty-scrollback.nvim: missing position with extent=' .. opts.kitty_get_text.extent,
         vim.log.levels.WARN,

@@ -393,7 +393,7 @@ M.launch = function()
     vim.schedule(function()
       ksb_kitty_cmds.get_text_term(get_text_opts(), function()
         ksb_kitty_cmds.signal_winchanged_to_kitty_child_process()
-        if opts.kitty_get_text.extent == 'screen' or opts.kitty_get_text.extent == 'all' then
+        if opts.kitty_get_text.extent == 'screen' or opts.kitty_get_text.extent == 'all' or opts.kitty_get_text.extent == 'bottom' then
           set_cursor_position(p.kitty_data)
         end
         ksb_win.show_status_window()
