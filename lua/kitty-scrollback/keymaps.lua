@@ -97,7 +97,6 @@ M.set_buffer_local_keymaps = function(bufid)
 
   if opts.keymaps_enabled then
     set_local_defaults()
-    vim.keymap.set({ 'n', 'i' }, plug.EXECUTE_CMD, ksb_api.execute_command, { buffer = bufid })
     vim.keymap.set({ 'n', 'i' }, plug.PASTE_CMD, ksb_api.paste_command, { buffer = bufid })
     vim.keymap.set({ '' }, plug.TOGGLE_FOOTER, ksb_api.toggle_footer, { buffer = bufid })
   end
