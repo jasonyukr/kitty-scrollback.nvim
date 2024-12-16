@@ -38,9 +38,6 @@ end
 ---If the current buffer is the paste buffer, then quit and execute the paste
 ---window contents in Kitty. Otherwise, no operation
 M.execute_command = function()
-  if vim.api.nvim_get_current_buf() == p.paste_bufid then
-    ksb_kitty_cmds.send_paste_buffer_text_to_kitty_and_quit(true)
-  end
 end
 
 ---If the current buffer is the paste buffer, then quit and paste the paste

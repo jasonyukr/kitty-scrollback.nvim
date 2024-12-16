@@ -201,8 +201,6 @@ M.send_lines_to_kitty_and_quit = function(lines, execute_command)
 end
 
 M.send_paste_buffer_text_to_kitty_and_quit = function(execute_command)
-  local paste_buffer_lines = vim.api.nvim_buf_get_lines(p.paste_bufid, 0, -1, false)
-  M.send_lines_to_kitty_and_quit(paste_buffer_lines, execute_command)
 end
 
 M.list_kitty_windows = function()
