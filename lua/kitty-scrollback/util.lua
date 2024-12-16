@@ -116,7 +116,6 @@ M.plug_mapping_names = {
   PASTE_VISUAL_CMD = '<Plug>(KsbPasteVisualCmd)',
 
   TOGGLE_FOOTER = '<Plug>(KsbToggleFooter)',
-  EXECUTE_CMD = '<Plug>(KsbExecuteCmd)',
   PASTE_CMD = '<Plug>(KsbPasteCmd)',
 }
 
