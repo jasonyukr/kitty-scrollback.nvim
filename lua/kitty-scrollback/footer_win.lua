@@ -97,7 +97,6 @@ M.open_footer_window = function(winopts, refresh_only)
 
   local default_footer_keys = {
     ['<Plug>(KsbNormalYank)'] = vim.fn.keytrans((vim.g.mapleader or '\\') .. 'y'):gsub('<lt>', '<'),
-    ['<Plug>(KsbExecuteCmd)'] = '<C-CR>',
     ['<Plug>(KsbPasteCmd)'] = '<S-CR>',
     ['<Plug>(KsbToggleFooter)'] = 'g?',
   }
