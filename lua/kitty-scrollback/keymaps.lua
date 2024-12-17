@@ -42,6 +42,18 @@ function CopyCurrentWordAndQuit()
   ksb_util.quitall()
 end
 
+
+-- Highlight on yank
+vim.api.nvim_create_autocmd('TextYankPost', {
+  group = vim.api.nvim_create_augroup('highlight_yank', {}),
+  desc = 'Hightlight selection on yank',
+  pattern = '*',
+  callback = function()
+    vim.highlight.on_yank { higroup = 'IncSearch', timeout = 1000 }
+  end,
+})
+
+
 local function set_global_defaults()
   set_default({ 'v' }, '<leader>Y', plug.VISUAL_YANK_LINE, {})
   set_default({ 'v' }, '<leader>y', plug.VISUAL_YANK, {})
