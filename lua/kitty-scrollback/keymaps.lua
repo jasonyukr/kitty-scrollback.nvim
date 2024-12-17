@@ -52,15 +52,16 @@ local function set_global_defaults()
   set_default({ 'n' }, 'q', plug.CLOSE_OR_QUIT_ALL, {})
   -- set_default({ 'n', 't', 'i' }, '<c-c>', plug.QUIT_ALL, {})
 
-  set_default({ 'v' }, '<c-cr>', plug.EXECUTE_VISUAL_CMD, {})
+--  set_default({ 'v' }, '<c-cr>', plug.EXECUTE_VISUAL_CMD, {})
   set_default({ 'v' }, '<s-cr>', plug.PASTE_VISUAL_CMD, {})
 
   vim.api.nvim_set_keymap('n', '<C-C>', ':lua CopyCurrentWordAndQuit()<CR>', { noremap = true, silent = true })
+  vim.api.nvim_set_keymap('n', '<c-cr>', ':lua CopyCurrentWordAndQuit()<CR>', { noremap = true, silent = true })
 end
 
 local function set_local_defaults()
   set_default({ '' }, 'g?', plug.TOGGLE_FOOTER, {})
-  set_default({ 'n', 'i' }, '<c-cr>', plug.EXECUTE_CMD, {})
+--  set_default({ 'n', 'i' }, '<c-cr>', plug.EXECUTE_CMD, {})
   set_default({ 'n', 'i' }, '<s-cr>', plug.PASTE_CMD, {})
 end
 
