@@ -56,7 +56,7 @@ local function set_global_defaults()
   set_default({ 'v' }, '<s-cr>', plug.PASTE_VISUAL_CMD, {})
 
   vim.api.nvim_set_keymap('n', '<C-C>', ':lua CopyCurrentWordAndQuit()<CR>', { noremap = true, silent = true })
-  vim.api.nvim_set_keymap('n', '<c-cr>', ':lua CopyCurrentWordAndQuit()<CR>', { noremap = true, silent = true })
+  vim.api.nvim_set_keymap('n', '<c-^>', ':lua CopyCurrentWordAndQuit()<CR>', { noremap = true, silent = true })
 end
 
 local function set_local_defaults()
