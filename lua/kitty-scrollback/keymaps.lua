@@ -56,10 +56,8 @@ local function set_global_defaults()
   set_default({ 'v' }, '<s-cr>', plug.PASTE_VISUAL_CMD, {})
 
   vim.api.nvim_set_keymap('n', '<c-c>', ':lua CopyCurrentWordAndQuit()<CR>', { noremap = true, silent = true })
-  vim.api.nvim_set_keymap('v', '<c-c>', ':lua CopyCurrentWordAndQuit()<CR>', { noremap = true, silent = true })
   -- Ctrl-^ is bound to Ctrl-Enter in kitty config
   vim.api.nvim_set_keymap('n', '<c-^>', ':lua CopyCurrentWordAndQuit()<CR>', { noremap = true, silent = true })
-  vim.api.nvim_set_keymap('v', '<c-^>', ':lua CopyCurrentWordAndQuit()<CR>', { noremap = true, silent = true })
 end
 
 local function set_local_defaults()
