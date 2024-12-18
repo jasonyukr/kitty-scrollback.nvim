@@ -20,24 +20,6 @@ local function set_default(modes, lhs, rhs, keymap_opts)
 end
 
 function CopyCurrentWordAndQuit()
-  -- Get the cursor position (row, column)
-  local row, col = unpack(vim.api.nvim_win_get_cursor(0))
-  -- Get the line under the cursor
-  local line = vim.api.nvim_get_current_line()
-  -- Get the start and end of the current word using only whitespace delimiters
-  local start_col, end_col = col, col
-  -- Move start_col leftwards to find the first non-whitespace character
-  while start_col > 1 and not line:sub(start_col-1, start_col-1):match("%s") do
-    start_col = start_col - 1
-  end
-  -- Move end_col rightwards to find the first whitespace character
-  while end_col <= #line and not line:sub(end_col, end_col):match("%s") do
-    end_col = end_col + 1
-  end
-  -- Extract the word based on the columns
-  local word = line:sub(start_col, end_col - 1)
-  -- Copy the word to the system clipboard (requires clipboard support in Neovim)
-  vim.fn.setreg('+', word)
   -- Quit nvim
   ksb_util.quitall()
 end
