@@ -381,7 +381,7 @@ M.launch = function()
     if no_buf_content then
       p.bufid = vim.api.nvim_get_current_buf()
     else
-      -- buffer must be empty for termopen, dashboard plugins may write to the first buffer before kitty-scrollback.nvim loads
+      -- buffer must be empty for the terminal, dashboard plugins may write to the first buffer before kitty-scrollback.nvim loads
       p.bufid = vim.api.nvim_create_buf(true, true)
       vim.api.nvim_set_current_buf(p.bufid)
     end
@@ -427,6 +427,22 @@ M.launch = function()
           ksb_util.restore_and_redraw()
           vim.schedule(function()
             opts.callbacks.after_ready(p.kitty_data, opts)
+          end)
+        end
+        if ksb_util.command_line_editing_mode then
+          vim.schedule(function()
+            local input = ksb_util.command_line_editing_mode_input
+            if input == nil or input == '' then
+              vim.notify(
+                'kitty-scrollback.nvim: no input file found in environment variable KITTY_SCROLLBACK_NVIM_EDIT_INPUT',
+                vim.log.levels.ERROR,
+                {}
+              )
+            else
+              local input_lines = vim.fn.readfile(input)
+              ksb_win.open_paste_window(#input_lines == 1 and input_lines[1] == '')
+              vim.api.nvim_buf_set_lines(p.paste_bufid, 0, -1, false, input_lines)
+            end
           end)
         end
         ksb_api.close_kitty_loading_window()

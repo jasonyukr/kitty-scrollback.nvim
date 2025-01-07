@@ -99,6 +99,43 @@ M.generate_kittens = function(generate_modes)
     'action_alias ' .. action_alias .. ' kitten ' .. kitty_scrollback_kitten,
     '',
   }
+  local alias_config_quoted = ([[action_alias %s kitten '%s']]):format(
+    action_alias,
+    kitty_scrollback_kitten
+  )
+
+  local alias_warn = {}
+  if kitty_scrollback_kitten:find('%s') then
+    alias_warn = {
+      [[# WARNING]],
+      [[#  ']] .. kitty_scrollback_kitten .. [[' contains whitespace.]],
+      [[#]],
+      [[#  If you are using Kitty version 0.38.2 or greater, then whitespace is allowed in the]],
+      [[#  path and you can ignore this warning. Just make sure that the kitten path is]],
+      [[#  wrapped in quotes. For example,]],
+      [[#]],
+      [[#    ]] .. alias_config_quoted,
+      [[#]],
+      [[#  If you are using Kitty version 0.38.1 or less, then you may receive an error opening]],
+      [[#  kitty-scrollback.nvim. If an error occurs, you can workaround this issue by symlinking]],
+      [[#  the kitty-scrollback.nvim plugin directory to Kitty's configuration directory with]],
+      [[#  the command:]],
+      [[#]],
+      [[#    ln -s ']]
+        .. vim.fn.fnamemodify(kitty_scrollback_kitten, ':h:h')
+        .. [[' ~/.config/kitty/kitty-scrollback.nvim]],
+      [[#]],
+      [[#  Then use the symlinked directory as the action_alias in kitty.conf instead of the real path]],
+      [[#]],
+      [[#    action_alias kitty_scrollback_nvim kitten kitty-scrollback.nvim/python/kitty_scrollback_nvim.py]],
+      [[#]],
+      [[#  Also, if you are using any kitty @ kitten commands update them to use the symlink path:]],
+      [[#]],
+      [[#    kitty kitten kitty-scrollback.nvim/python/kitty_scrollback_nvim.py]],
+      [[#]],
+      [[]],
+    }
+  end
 
   local builtin_map_configs = {
     '# Browse scrollback buffer in nvim',
@@ -128,6 +165,7 @@ M.generate_kittens = function(generate_modes)
   }
 
   local configs = {}
+  vim.list_extend(configs, alias_warn)
 
   local filetype
   if target_gen_modes['maps'] then
@@ -157,6 +195,111 @@ M.generate_kittens = function(generate_modes)
 
   if #vim.api.nvim_list_uis() == 0 then -- if nvim is running in headless mode
     for _, line in pairs(configs) do
+      vim.print(line)
+    end
+    M.quit_all()
+  end
+end
+
+M.generate_command_line_editing = function(shell)
+  shell = (shell and next(shell)) and shell[1] or 'undefined'
+  local kitty_scrollback_edit_command_line = vim.fn.fnamemodify(
+    vim.api.nvim_get_runtime_file('scripts/edit_command_line.sh', false)[1],
+    ':p'
+  )
+  local kitty_scrollback_edit_command_line_bash = vim.fn.fnamemodify(
+    vim.api.nvim_get_runtime_file('scripts/edit_command_line.bash', false)[1],
+    ':p'
+  )
+
+  local configs = {
+    bash = {
+      [[# add the following environment variables to your bash config (e.g., ~/.bashrc)]],
+      [[# the editor defined in KITTY_SCROLLBACK_VISUAL will be used in place of VISUAL]],
+      [[# for other scenarios that are not editing the command-line. For example, C-xC-e]],
+      [[# will edit the current command-line in kitty-scrollback.nvim and pressing v in]],
+      [[# less will open the file in $KITTY_SCROLLBACK_VISUAL (defaults to nvim if not]],
+      [[# defined)]],
+      [[export KITTY_SCROLLBACK_VISUAL='nvim']],
+      [[export VISUAL=']] .. kitty_scrollback_edit_command_line_bash .. [[']],
+      [[# [optional] pass arguments to kitty-scrollback.nvim in command-line editing mode]],
+      [[# by using the environment variable KITTY_SCROLLBACK_NVIM_EDIT_ARGS]],
+      [[# export KITTY_SCROLLBACK_NVIM_EDIT_ARGS='']],
+      [[]],
+      [[# [optional] customize your readline config (e.g., ~/.inputrc) ]],
+      [[# default mapping in vi mode]],
+      [[set keymap vi-command]],
+      [["v": vi-edit-and-execute-command]],
+      [[]],
+      [[# default mapping in emacs mode]],
+      [[set keymap emacs]],
+      [["\C-x\C-e": edit-and-execute-command]],
+      [[]],
+    },
+    fish = {
+      [[# add the following function and bindings to your fish config]],
+      [[# e.g., ~/.config/fish/conf.d/kitty_scrollback_nvim.fish or ~/.config/fish/config.fish]],
+      [[]],
+      [[function kitty_scrollback_edit_command_buffer]],
+      [[  set --local --export VISUAL ']] .. kitty_scrollback_edit_command_line .. [[']],
+      [[  edit_command_buffer]],
+      [[  commandline '']],
+      [[end]],
+      [[]],
+      [[bind --mode default \ee kitty_scrollback_edit_command_buffer]],
+      [[bind --mode default \ev kitty_scrollback_edit_command_buffer]],
+      [[]],
+      [[bind --mode visual \ee kitty_scrollback_edit_command_buffer]],
+      [[bind --mode visual \ev kitty_scrollback_edit_command_buffer]],
+      [[]],
+      [[bind --mode insert \ee kitty_scrollback_edit_command_buffer]],
+      [[bind --mode insert \ev kitty_scrollback_edit_command_buffer]],
+      [[]],
+      [[# [optional] pass arguments to kitty-scrollback.nvim in command-line editing mode]],
+      [[# by using the environment variable KITTY_SCROLLBACK_NVIM_EDIT_ARGS]],
+      [[# set --global --export KITTY_SCROLLBACK_NVIM_EDIT_ARGS '']],
+      [[]],
+    },
+    zsh = {
+      [[# IMPORTANT: kitty-scrollback.nvim only supports zsh 5.9 or greater for command-line editing,]],
+      [[# please check your version by running: zsh --version]],
+      [[]],
+      [[# add the following environment variables to your zsh config (e.g., ~/.zshrc)]],
+      [[]],
+      [[autoload -Uz edit-command-line]],
+      [[zle -N edit-command-line]],
+      [[]],
+      [[function kitty_scrollback_edit_command_line() { ]],
+      [[  local VISUAL=']] .. kitty_scrollback_edit_command_line .. [[']],
+      [[  zle edit-command-line]],
+      [[  zle kill-whole-line]],
+      [[}]],
+      [[zle -N kitty_scrollback_edit_command_line]],
+      [[]],
+      [[bindkey '^x^e' kitty_scrollback_edit_command_line]],
+      [[]],
+      [[# [optional] pass arguments to kitty-scrollback.nvim in command-line editing mode]],
+      [[# by using the environment variable KITTY_SCROLLBACK_NVIM_EDIT_ARGS]],
+      [[# export KITTY_SCROLLBACK_NVIM_EDIT_ARGS='']],
+      [[]],
+    },
+  }
+
+  ---@type table|string
+  local config = configs[shell]
+  if not config then
+    config = 'no config found for: ' .. shell
+  end
+
+  local bufid = vim.api.nvim_create_buf(true, true)
+  vim.api.nvim_set_option_value('filetype', shell or '', {
+    buf = bufid,
+  })
+  vim.api.nvim_set_current_buf(bufid)
+  vim.api.nvim_buf_set_lines(bufid, 0, -1, false, config)
+
+  if #vim.api.nvim_list_uis() == 0 then -- if nvim is running in headless mode
+    for _, line in pairs(config) do
       vim.print(line)
     end
     M.quit_all()

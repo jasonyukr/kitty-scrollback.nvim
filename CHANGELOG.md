@@ -1,3 +1,38 @@
+# [6.2.0](https://github.com/mikesmithgh/kitty-scrollback.nvim/compare/v6.1.2...v6.2.0) (2024-12-31)
+
+
+### Features
+
+* use jobstart for Neovim v0.11+ instead of termopen ([#298](https://github.com/mikesmithgh/kitty-scrollback.nvim/issues/298)) ([2d24427](https://github.com/mikesmithgh/kitty-scrollback.nvim/commit/2d244272544cceea84f1249fbbb94297d907bbc9)), closes [#295](https://github.com/mikesmithgh/kitty-scrollback.nvim/issues/295)
+
+## [6.1.2](https://github.com/mikesmithgh/kitty-scrollback.nvim/compare/v6.1.1...v6.1.2) (2024-12-31)
+
+
+### Bug Fixes
+
+* update warning message during kitten generation if path contains whitespace ([#296](https://github.com/mikesmithgh/kitty-scrollback.nvim/issues/296)) ([a8d7b84](https://github.com/mikesmithgh/kitty-scrollback.nvim/commit/a8d7b849435d10021672064d9bba61ffe8d8bde6))
+
+## [6.1.1](https://github.com/mikesmithgh/kitty-scrollback.nvim/compare/v6.1.0...v6.1.1) (2024-12-30)
+
+
+### Bug Fixes
+
+* add warning during kitten generation if path contains whitespace ([#294](https://github.com/mikesmithgh/kitty-scrollback.nvim/issues/294)) ([7ee7677](https://github.com/mikesmithgh/kitty-scrollback.nvim/commit/7ee767738ec4cbc7de7731dbe7bfe3a0b22b3dc4))
+
+# [6.1.0](https://github.com/mikesmithgh/kitty-scrollback.nvim/compare/v6.0.0...v6.1.0) (2024-12-18)
+
+
+### Features
+
+* edit the current command line for bash, fish, or zsh ([#253](https://github.com/mikesmithgh/kitty-scrollback.nvim/issues/253)) ([d8f5433](https://github.com/mikesmithgh/kitty-scrollback.nvim/commit/d8f5433153c4ff130fbef6095bd287b680ef2b6f)), closes [#245](https://github.com/mikesmithgh/kitty-scrollback.nvim/issues/245)
+
+See [Command-line editing setup](https://github.com/mikesmithgh/kitty-scrollback.nvim/tree/main?tab=readme-ov-file#command-line-editing) for setup instructions.
+
+bash ([edit-and-execute-command](https://www.gnu.org/software/bash/manual/html_node/Miscellaneous-Commands.html#index-edit_002dand_002dexecute_002dcommand-_0028C_002dx-C_002de_0029)), fish ([edit_command_buffer](https://fishshell.com/docs/current/cmds/bind.html#additional-functions)), and zsh ([edit-command-line](https://zsh.sourceforge.io/Doc/Release/User-Contributions.html)) all have the ability to edit the current command in an external editor. The typical workflow is that you have a long command already entered in your shell that you need to modify and execute, this makes it easy to refine complex commands.
+
+After [setting up command-line editing in kitty-scrollback.nvim](https://github.com/mikesmithgh/kitty-scrollback.nvim/tree/main?tab=readme-ov-file#command-line-editing), you can open your current command in kitty-scrollback.nvim's paste window. The benefit of this approach compared to using a standard Neovim instance is that you still have access to the scrollback history and kitty-scrollback.nvim's [features](https://github.com/mikesmithgh/kitty-scrollback.nvim/tree/main?tab=readme-ov-file#-features) to help you quickly modify or execute the command.
+
+
 # [6.0.0](https://github.com/mikesmithgh/kitty-scrollback.nvim/compare/v5.0.2...v6.0.0) (2024-11-15)
 
 
