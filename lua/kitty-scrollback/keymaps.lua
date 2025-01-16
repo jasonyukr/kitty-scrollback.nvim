@@ -30,6 +30,10 @@ function CopyCurrentChunkOrWord()
 
   col = col + 1
   local current_char = line:sub(col, col)
+  if current_char == nil then
+    vim.fn.setreg('+', "")
+    return
+  end
 
   -- Move backwards to find the previous single quote (opening quote)
   local prev_sq_col = col - 1
@@ -84,7 +88,7 @@ function CopyCurrentChunkOrWord()
   ---------------------------------------------------
 
   if current_char:match("%s") then
-    vim.fn.setreg('+', " ")
+    vim.fn.setreg('+', "")
     return
   end
 
