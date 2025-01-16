@@ -30,7 +30,7 @@ function CopyCurrentChunkOrWord()
 
   col = col + 1
   local current_char = line:sub(col, col)
-  if current_char == nil then
+  if current_char == nil or col > #line then
     vim.fn.setreg('+', "")
     return
   end
