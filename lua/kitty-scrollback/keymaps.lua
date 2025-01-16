@@ -19,25 +19,126 @@ local function set_default(modes, lhs, rhs, keymap_opts)
   end
 end
 
-function CopyCurrentWordAndQuit()
+-- If current word is surrounded by single quote, return entire chunk.
+-- Otherwise copy the current word based only on whitespace delimiters.
+function CopyCurrentChunkOrWord()
   -- Get the cursor position (row, column)
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+
   -- Get the line under the cursor
   local line = vim.api.nvim_get_current_line()
-  -- Get the start and end of the current word using only whitespace delimiters
-  local start_col, end_col = col, col
-  -- Move start_col leftwards to find the first non-whitespace character
-  while start_col > 1 and not line:sub(start_col-1, start_col-1):match("%s") do
-    start_col = start_col - 1
+
+  col = col + 1
+  local current_char = line:sub(col, col)
+
+  -- Move backwards to find the previous single quote (opening quote)
+  local prev_sq_col = col - 1
+  while prev_sq_col > 0 do
+    if line:sub(prev_sq_col, prev_sq_col) == "'" then
+      break
+    else
+      prev_sq_col = prev_sq_col - 1
+    end
   end
-  -- Move end_col rightwards to find the first whitespace character
-  while end_col <= #line and not line:sub(end_col, end_col):match("%s") do
-    end_col = end_col + 1
+  if prev_sq_col == 0 then
+    prev_sq_col = -1
   end
-  -- Extract the word based on the columns
-  local word = line:sub(start_col, end_col - 1)
-  -- Copy the word to the system clipboard (requires clipboard support in Neovim)
-  vim.fn.setreg('+', word)
+
+  -- Move forwards to find the next single quote (closing quote)
+  local next_sq_col = col + 1
+  while next_sq_col <= #line do
+    if line:sub(next_sq_col, next_sq_col) == "'" then
+      break
+    else
+      next_sq_col = next_sq_col + 1
+    end
+  end
+  if next_sq_col > #line then
+    next_sq_col = -1
+  end
+
+  if current_char == "'" then
+    if prev_sq_col ~= -1 then
+      -- 'xxx...yyy'^    where '^ is signle-quote current character
+      local chunk = line:sub(prev_sq_col, col)
+      vim.fn.setreg('+', chunk)
+      return
+    elseif next_sq_col ~= -1 then
+      -- '^xxx...yyy'     where '^ is single-quote current character
+      local chunk = line:sub(col, next_sq_col)
+      vim.fn.setreg('+', chunk)
+      return
+    end
+  else
+    if prev_sq_col ~= -1 and next_sq_col ~= -1 then
+      -- 'xxx...^...yyy'   where ^ is non-single-quote current character
+      local chunk = line:sub(prev_sq_col, next_sq_col)
+      vim.fn.setreg('+', chunk)
+      return
+    end
+  end
+
+  ---------------------------------------------------
+  -- Single quote NOT found in this line.
+  -- Fall back to word selection based on whitespace.
+  ---------------------------------------------------
+
+  if current_char:match("%s") then
+    vim.fn.setreg('+', " ")
+    return
+  end
+
+  -- Move backwards to find the previous white-space
+  local prev_ws_col = col - 1
+  while prev_ws_col > 0 do
+    if not line:sub(prev_ws_col, prev_ws_col):match("%s") then
+      prev_ws_col = prev_ws_col - 1
+    else
+      break
+    end
+  end
+  if prev_ws_col == 0 then
+    prev_ws_col = -1
+  end
+
+  -- Move forwards to find the next white-space
+  local next_ws_col = col + 1
+  while next_ws_col <= #line do
+    if not line:sub(next_ws_col, next_ws_col):match("%s") then
+      next_ws_col = next_ws_col + 1
+    else
+      break
+    end
+  end
+  if next_ws_col > #line then
+    next_ws_col = -1
+  end
+
+  if prev_ws_col ~= -1 then
+    if next_ws_col ~= -1 then
+      -- 000 xxx^yyy 111   where ^ is non-single-quote current character
+      local word = line:sub(prev_ws_col + 1, next_ws_col - 1)
+      vim.fn.setreg('+', word)
+    else
+      -- 000 xxx^yyy|      where | is end of line
+      local word = line:sub(prev_ws_col + 1)
+      vim.fn.setreg('+', word)
+    end
+  else
+    if next_ws_col ~= -1 then
+      -- |xxx^yyy 111      where | is start of line
+      local word = line:sub(1, next_ws_col - 1)
+      vim.fn.setreg('+', word)
+    else
+      -- |xxx^yyy|         where | is start/end of line
+      local word = line:sub(1)
+      vim.fn.setreg('+', word)
+    end
+  end
+end
+
+function CopyCurrentChunkOrWordAndQuit()
+  CopyCurrentChunkOrWord()
   -- Quit nvim
   ksb_util.quitall()
 end
@@ -55,9 +156,9 @@ local function set_global_defaults()
   -- set_default({ 'v' }, '<c-cr>', plug.EXECUTE_VISUAL_CMD, {})
   set_default({ 'v' }, '<s-cr>', plug.PASTE_VISUAL_CMD, {})
 
-  vim.api.nvim_set_keymap('n', '<c-c>', ':lua CopyCurrentWordAndQuit()<CR>', { noremap = true, silent = true })
+  vim.api.nvim_set_keymap('n', '<c-c>', ':lua CopyCurrentChunkOrWordAndQuit()<CR>', { noremap = true, silent = true })
   -- Ctrl-^ is bound to Ctrl-Enter in kitty config
-  vim.api.nvim_set_keymap('n', '<c-^>', ':lua CopyCurrentWordAndQuit()<CR>', { noremap = true, silent = true })
+  vim.api.nvim_set_keymap('n', '<c-^>', ':lua CopyCurrentChunkOrWordAndQuit()<CR>', { noremap = true, silent = true })
 end
 
 local function set_local_defaults()
