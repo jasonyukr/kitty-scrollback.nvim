@@ -24,43 +24,54 @@ end
 function CopyCurrentChunkOrWord()
   -- Get the cursor position (row, column)
   local row, col = unpack(vim.api.nvim_win_get_cursor(0))
+  col = col + 1
 
   -- Get the line under the cursor
   local line = vim.api.nvim_get_current_line()
 
-  col = col + 1
+  -- Set empty result for the case of invalid column
   if col > #line then
     vim.fn.setreg('+', "")
     return
   end
+
   local current_char = line:sub(col, col)
 
-  -- Move backwards to find the previous single quote (opening quote)
-  local prev_sq_col = col - 1
-  while prev_sq_col > 0 do
-    if line:sub(prev_sq_col, prev_sq_col) == "'" then
-      break
-    else
-      prev_sq_col = prev_sq_col - 1
+  -- Search for previous single-quote and whitespace
+  local prev_sq_col = -1
+  local prev_ws_col = -1
+  local seek_col = col - 1
+  while seek_col > 0 do
+    local ch = line:sub(seek_col, seek_col)
+    if prev_sq_col == -1 and ch == "'" then
+      prev_sq_col = seek_col
+    elseif prev_ws_col == -1 and ch:match("%s") then
+      prev_ws_col = seek_col
     end
-  end
-  if prev_sq_col == 0 then
-    prev_sq_col = -1
+    if prev_sq_col ~= -1 and prev_ws_col ~= -1 then
+      break
+    end
+    seek_col = seek_col - 1
   end
 
-  -- Move forwards to find the next single quote (closing quote)
-  local next_sq_col = col + 1
-  while next_sq_col <= #line do
-    if line:sub(next_sq_col, next_sq_col) == "'" then
-      break
-    else
-      next_sq_col = next_sq_col + 1
+  -- Search for next single-quote and whitespace
+  local next_sq_col = -1
+  local next_ws_col = -1
+  seek_col = col + 1
+  while seek_col <= #line do
+    local ch = line:sub(seek_col, seek_col)
+    if next_sq_col == -1 and ch == "'" then
+      next_sq_col = seek_col
+    elseif next_ws_col == -1 and ch:match("%s") then
+      next_ws_col = seek_col
     end
-  end
-  if next_sq_col > #line then
-    next_sq_col = -1
+    if next_sq_col ~= -1 and next_ws_col ~= -1 then
+      break
+    end
+    seek_col = seek_col + 1
   end
 
+  -- Handle the cases that chunk is surrounded by single-quote
   if current_char == "'" then
     if prev_sq_col ~= -1 then
       -- 'xxx...yyy'^    where '^ is signle-quote current character
@@ -82,42 +93,13 @@ function CopyCurrentChunkOrWord()
     end
   end
 
-  ---------------------------------------------------
-  -- Single quote NOT found in this line.
-  -- Fall back to word selection based on whitespace.
-  ---------------------------------------------------
-
+  -- Set empty result for the case that current character is white-space
   if current_char:match("%s") then
     vim.fn.setreg('+', "")
     return
   end
 
-  -- Move backwards to find the previous white-space
-  local prev_ws_col = col - 1
-  while prev_ws_col > 0 do
-    if not line:sub(prev_ws_col, prev_ws_col):match("%s") then
-      prev_ws_col = prev_ws_col - 1
-    else
-      break
-    end
-  end
-  if prev_ws_col == 0 then
-    prev_ws_col = -1
-  end
-
-  -- Move forwards to find the next white-space
-  local next_ws_col = col + 1
-  while next_ws_col <= #line do
-    if not line:sub(next_ws_col, next_ws_col):match("%s") then
-      next_ws_col = next_ws_col + 1
-    else
-      break
-    end
-  end
-  if next_ws_col > #line then
-    next_ws_col = -1
-  end
-
+  -- Fall back to word selection based on whitespace.
   if prev_ws_col ~= -1 then
     if next_ws_col ~= -1 then
       -- 000 xxx^yyy 111   where ^ is non-single-quote current character
