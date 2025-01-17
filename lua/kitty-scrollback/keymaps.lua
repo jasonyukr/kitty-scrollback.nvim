@@ -29,11 +29,11 @@ function CopyCurrentChunkOrWord()
   local line = vim.api.nvim_get_current_line()
 
   col = col + 1
-  local current_char = line:sub(col, col)
-  if current_char == nil or col > #line then
+  if col > #line then
     vim.fn.setreg('+', "")
     return
   end
+  local current_char = line:sub(col, col)
 
   -- Move backwards to find the previous single quote (opening quote)
   local prev_sq_col = col - 1
