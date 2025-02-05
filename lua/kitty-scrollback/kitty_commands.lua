@@ -63,6 +63,30 @@ local function defer_resize_term(min_cols)
   return orig_columns
 end
 
+local open_term_command_from_nvim_version = function()
+  if vim.fn.has('nvim-0.11') == 1 then
+    -- intentionally pass an invalid argument type to term
+    -- if an error is returned that it must be boolean then term exists for jobstart
+    ---@type boolean, integer|string
+    local ok, err = pcall(vim.fn.jobstart, '', { term = 1 })
+    local jobstart_has_term = not ok
+        and err:match([[Vim:E475: Invalid argument: 'term' must be Boolean]])
+        and true
+      or false
+    if jobstart_has_term then
+      return 'jobstart'
+    else
+      -- using Neovim v0.11, however, it is on a commit before implementing term on jobstart
+      return 'termopen'
+    end
+  else
+    -- earlier versions of Neovim use termopen
+    return 'termopen'
+  end
+end
+
+M.open_term_command = open_term_command_from_nvim_version()
+
 ---@param get_text_opts KsbKittyGetTextArguments
 ---@param on_exit_cb function
 M.get_text_term = function(get_text_opts, on_exit_cb)
@@ -81,9 +105,8 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
   -- set the shell used to sh to avoid imcompatabiliies with other shells (e.g., nushell, fish, etc)
   vim.o.shell = 'sh'
 
-  local open_term_fn = vim.fn.jobstart
+  local open_term_fn = vim.fn[M.open_term_command]
   local open_term_options = {
-    term = true,
     stdout_buffered = true,
     stderr_buffered = true,
     on_stdout = function(_, data)
@@ -115,7 +138,7 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
           end
 
           if error_index > 0 then
-            ksb_util.display_error(scrollback_cmd, {
+            ksb_util.display_cmd_error(scrollback_cmd, {
               entrypoint = 'open_term_fn() :: exit_code = 0 and error_index > 0',
               full_cmd = full_cmd,
               code = 1, -- exit code is not returned through pipe but we can assume 1 due to error message
@@ -142,7 +165,7 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
               :gsub([[\x1b\\]], '')
               :gsub(';k=s', '')
           or nil
-        ksb_util.display_error(full_cmd, {
+        ksb_util.display_cmd_error(full_cmd, {
           entrypoint = 'open_term_fn() :: exit_code ~= 0',
           code = exit_code,
           channel_id = id,
@@ -152,14 +175,13 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
       end
     end,
   }
-  if vim.fn.has('nvim-0.11') <= 0 then
-    open_term_fn = vim.fn.termopen
-    open_term_options.term = nil
+  if M.open_term_command == 'jobstart' then
+    open_term_options.term = true
   end
 
   local success, error = pcall(open_term_fn, full_cmd, open_term_options)
   if not success then
-    ksb_util.display_error(full_cmd, {
+    ksb_util.display_cmd_error(full_cmd, {
       entrypoint = 'open_term_fn() :: pcall(open_term_fn) error returned',
       stderr = error or nil,
     }, error_header)

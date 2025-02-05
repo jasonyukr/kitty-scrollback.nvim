@@ -110,7 +110,7 @@ M.generate_kittens = function(generate_modes)
       [[# WARNING]],
       [[#  ']] .. kitty_scrollback_kitten .. [[' contains whitespace.]],
       [[#]],
-      [[#  If you are using Kitty version 0.38.2 or greater, then whitespace is allowed in the]],
+      [[#  If you are using Kitty version 0.39.0 or greater, then whitespace is allowed in the]],
       [[#  path and you can ignore this warning. Just make sure that the kitten path is]],
       [[#  wrapped in quotes. For example,]],
       [[#]],
@@ -285,10 +285,10 @@ M.generate_command_line_editing = function(shell)
     },
   }
 
-  ---@type table|string
   local config = configs[shell]
   if not config then
-    config = 'no config found for: ' .. shell
+    vim.notify('no config found for: ' .. shell, vim.log.levels.ERROR, {})
+    return
   end
 
   local bufid = vim.api.nvim_create_buf(true, true)
