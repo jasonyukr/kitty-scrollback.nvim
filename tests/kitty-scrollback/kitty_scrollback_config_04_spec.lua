@@ -156,14 +156,14 @@ $🭼▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
         ),
         h.with_pause_seconds_before(
           h.send_without_newline([[
-:='yank to " did not open the paste window'
+:lua vim.print('yank to " did not open the paste window')
 ]]),
           1
         ),
 
         h.with_pause_seconds_before(
           h.send_without_newline([[
-:=vim.fn.getreg('"')
+:lua vim.print(vim.fn.getreg('"'))
 ]]),
           2
         ),
@@ -193,9 +193,9 @@ $ ksb_tree
    ├── footer_win.lua                                                                                                                                            
    ├── health.lua                                                                                                                                                
                                                                                                                                                                  
-:='yank to " did not open the paste window'
+:lua vim.print('yank to " did not open the paste window')
 yank to " did not open the paste window
-:=vim.fn.getreg('"')
+:lua vim.print(vim.fn.getreg('"'))
         _     _ _____ _______ _______ __   __     _______ _______  ______  _____                ______  _______ _______ _     _   __   _ _    _ _____ _______
         |____/    |      |       |      \_/   ___ |______ |       |_____/ |     | |      |      |_____] |_____| |       |____/    | \  |  \  /    |   |  |  |
         |    \_ __|__    |       |       |        ______| |_____  |    \_ |_____| |_____ |_____ |_____] |     | |_____  |    \_ . |  \_|   \/   __|__ |  |  |
@@ -282,7 +282,7 @@ $🭼▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
 
         h.with_pause_seconds_before(
           h.send_without_newline([[
-:=vim.fn.getreg('*')
+:lua vim.print(vim.fn.getreg('*'))
 ]]),
           2
         ),
@@ -314,7 +314,7 @@ NORMAL bold  dim   itali under rever strik  BRIGHT bold  dim   itali under rever
 \▏                                                                                                                                                              ▕
 \▏                                                                                                                                                              ▕
                                                                                                                                                                  
-:=vim.fn.getreg('*')
+:lua vim.print(vim.fn.getreg('*'))
         _     _ _____ _______ _______ __   __     _______ _______  ______  _____                ______  _______ _______ _     _   __   _ _    _ _____ _______
         |____/    |      |       |      \_/   ___ |______ |       |_____/ |     | |      |      |_____] |_____| |       |____/    | \  |  \  /    |   |  |  |
         |    \_ __|__    |       |       |        ______| |_____  |    \_ |_____| |_____ |_____ |_____] |     | |_____  |    \_ . |  \_|   \/   __|__ |  |  |
@@ -610,10 +610,8 @@ $🭼▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁▁
     )
     h.assert_screen_equals(
       h.feed_kitty({
-        h.send_as_string([[:=vim.fn.stdpath('config')]]),
-        h.with_pause_seconds_before(h.send_without_newline(h.enter()), 2),
         h.with_pause_seconds_before(
-          h.send_without_newline((h.send_as_string([[:=vim.env.NVIM_APPNAME]]))),
+          h.send_without_newline((h.send_as_string([[:lua vim.print(vim.env.NVIM_APPNAME)]]))),
           2
         ),
         h.send_without_newline(h.enter()),
@@ -648,7 +646,7 @@ N▏# example > --no-nvim-args --env NVIM_APPNAME=ksb-nvim                      
 \▏                                                                                                                                                              ▕
 T▏                                                                                                                                                              ▕
                                                                                                                                                                  
-:=vim.env.NVIM_APPNAME
+:lua vim.print(vim.env.NVIM_APPNAME)
 ksb-nvim
 Press ENTER or type command to continue
 ]],
@@ -733,7 +731,7 @@ Press ENTER or type command to continue
       pattern = [[
 kitty%-scrollback:.*require%("kitty%-scrollback.health"%).check%(%)
 .*kitty%-scrollback: Neovim version.*
-.*%- OK NVIM.*
+.*%- .*OK NVIM.*
 ]],
 
       cursor_y = 1,

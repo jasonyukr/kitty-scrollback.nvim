@@ -113,7 +113,7 @@ $ brew search a
   it('should successfully open KittyScrollbackCheckHealth', function()
     local actual = h.feed_kitty({
       h.send_as_string(
-        [[nvim +'lua vim.opt.rtp:append("../..") vim.opt.rtp:append("../../kitty-scrollback.nvim") require("kitty-scrollback").setup() vim.cmd("KittyScrollbackCheckHealth")']]
+        [[nvim --clean +'lua vim.opt.rtp:append("../..") vim.opt.rtp:append("../../kitty-scrollback.nvim") require("kitty-scrollback").setup() vim.cmd("KittyScrollbackCheckHealth")']]
       ),
     })
     h.assert_screen_not_match(
@@ -125,7 +125,7 @@ $ brew search a
       pattern = [[
 kitty%-scrollback:.*require%("kitty%-scrollback.health"%).check%(%)
 .*kitty%-scrollback: Neovim version.*
-.*%- OK NVIM.*
+.*%- .*OK NVIM.*
 ]],
       cursor_y = 1,
       cursor_x = 1,
@@ -135,7 +135,7 @@ kitty%-scrollback:.*require%("kitty%-scrollback.health"%).check%(%)
   it('should successfully open checkhealth and warn user no kitty data available', function()
     local actual = h.feed_kitty({
       h.send_as_string(
-        [[nvim +'lua vim.opt.rtp:append("../..") vim.opt.rtp:append("../../kitty-scrollback.nvim") require("kitty-scrollback").setup() vim.cmd("checkhealth kitty-scrollback")']]
+        [[nvim --clean +'lua vim.opt.rtp:append("../..") vim.opt.rtp:append("../../kitty-scrollback.nvim") require("kitty-scrollback").setup() vim.cmd("checkhealth kitty-scrollback")']]
       ),
       h.send_without_newline([[zR]]),
     })
@@ -153,7 +153,7 @@ kitty%-scrollback:.*require%("kitty%-scrollback.health"%).check%(%)
       pattern = [[
 kitty%-scrollback:.*require%("kitty%-scrollback.health"%).check%(%)
 .*kitty%-scrollback: Neovim version.*
-.*%- OK NVIM.*
+.*%- .*OK NVIM.*
 ]],
       cursor_y = 1,
       cursor_x = 1,
@@ -245,12 +245,11 @@ $
     h.assert_screen_match(
       h.feed_kitty({
         h.open_kitty_scrollback_nvim(),
-        h.with_pause_seconds_before([[:=vim.env.KITTY_SCROLLBACK_NVIM]], 1),
+        h.with_pause_seconds_before([[:lua vim.print(vim.env.KITTY_SCROLLBACK_NVIM)]], 1),
       }),
       {
         pattern = [[
-.*
-:=vim.env.KITTY_SCROLLBACK_NVIM
+.*vim.env.KITTY_SCROLLBACK_NVIM.*
 true
 Press ENTER or type command to continue.*]],
       }

@@ -63,29 +63,7 @@ local function defer_resize_term(min_cols)
   return orig_columns
 end
 
-local open_term_command_from_nvim_version = function()
-  if vim.fn.has('nvim-0.11') == 1 then
-    -- intentionally pass an invalid argument type to term
-    -- if an error is returned that it must be boolean then term exists for jobstart
-    ---@type boolean, integer|string
-    local ok, err = pcall(vim.fn.jobstart, '', { term = 1 })
-    local jobstart_has_term = not ok
-        and err:match([[Vim:E475: Invalid argument: 'term' must be Boolean]])
-        and true
-      or false
-    if jobstart_has_term then
-      return 'jobstart'
-    else
-      -- using Neovim v0.11, however, it is on a commit before implementing term on jobstart
-      return 'termopen'
-    end
-  else
-    -- earlier versions of Neovim use termopen
-    return 'termopen'
-  end
-end
-
-M.open_term_command = open_term_command_from_nvim_version()
+M.open_term_command = vim.fn.has('nvim-0.11') <= 0 and 'termopen' or 'jobstart'
 
 ---@param get_text_opts KsbKittyGetTextArguments
 ---@param on_exit_cb function
@@ -118,7 +96,7 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
     on_exit = function(id, exit_code, event)
       -- NOTE(#58): nvim v0.9 support
       -- vim.o.columns is resized automatically in nvim v0.9.1 when we trigger kitty so send a SIGWINCH signal
-      -- vim.o.columns is explicitly set to resize appropriatley on v0.9.0
+      -- vim.o.columns is explicitly set to resize appropriately on v0.9.0
       -- see https://github.com/neovim/neovim/pull/23503
       vim.o.columns = p.orig_columns
       if exit_code == 0 then
