@@ -202,7 +202,7 @@ def handle_result(args: List[str],
             '--type',
             'overlay',
             '--title',
-            'kitty-scrollback.nvim',
+            'scrollback',
         ) + env + cwd
 
         nvim_args = parse_nvim_args(args) + (
