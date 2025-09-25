@@ -257,7 +257,7 @@ M.open_kitty_loading_window = function(env)
     '--type',
     'overlay',
     '--title',
-    'scrollback :: loading...',
+    'scrollback',
     '--env',
     'KITTY_SCROLLBACK_NVIM_STYLE_SIMPLE=' .. tostring(opts.status_window.style_simple),
     '--env',
