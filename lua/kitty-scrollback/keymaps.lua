@@ -142,6 +142,7 @@ local function set_global_defaults()
   -- set_default({ 'v' }, '<c-cr>', plug.EXECUTE_VISUAL_CMD, {})
   set_default({ 'v' }, '<s-cr>', plug.PASTE_VISUAL_CMD, {})
 
+  set_default({ 'n' }, '<cr>', plug.CLOSE_OR_QUIT_ALL, {})
   vim.api.nvim_set_keymap('n', '<c-c>', ':lua CopyCurrentChunkOrWordAndQuit()<CR>', { noremap = true, silent = true })
   -- Ctrl-^ is bound to Ctrl-Enter in kitty config
   vim.api.nvim_set_keymap('n', '<c-^>', ':lua CopyCurrentChunkOrWordAndQuit()<CR>', { noremap = true, silent = true })
