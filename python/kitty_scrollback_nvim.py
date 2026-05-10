@@ -141,6 +141,14 @@ def parse_env(args):
     return tuple(env_args)
 
 
+def has_profile_env_arg(args):
+    for idx, arg in enumerate(args):
+        if (arg == '--env' and idx + 1 < len(args)
+                and args[idx + 1] == 'KITTY_SCROLLBACK_NVIM_PROFILE=1'):
+            return True
+    return False
+
+
 def parse_config(args):
     config_args = []
     for idx, arg in reversed(list(enumerate(args))):
@@ -164,30 +172,99 @@ def parse_cwd(args, default_cwd):
 
 def scrollback_text_to_term_payload(text):
     payload = []
+    reset_sgr = ('\x1b[0m', '\x1b[m')
     for line in text.splitlines(True):
         line = line.replace('\r', '')
         if line.endswith('\n'):
-            payload.append(line[:-1] + '\x1b[0m\n')
+            body = line[:-1]
+            payload.append(body + ('\n' if body.endswith(reset_sgr) else '\x1b[0m\n'))
+        elif line.endswith(reset_sgr):
+            payload.append(line)
         else:
             payload.append(line + '\x1b[0m')
     return ''.join(payload)
 
 
-def preload_scrollback(w, config, tmux_data):
+def scrollback_text_to_plain_payload(text):
+    return text.replace('\r', '')
+
+
+def preload_scrollback_as_ansi(config):
+    return config == 'ksb_builtin_get_text_all'
+
+
+def preload_scrollback_as_plain(config):
+    return config == 'fast_plain_config'
+
+
+def profile_start(args):
+    if (os.environ.get('KITTY_SCROLLBACK_NVIM_PROFILE') != '1'
+            and not has_profile_env_arg(args)):
+        return None
+    import time
+    return {
+        'events': [],
+        'started_at': time.time(),
+        '_start': time.perf_counter(),
+        '_time': time
+    }
+
+
+def profile_record(profile, name, data=None):
+    if profile is None:
+        return
+    event = {
+        'name': name,
+        'source': 'python',
+        'at_ms':
+        round((profile['_time'].perf_counter() - profile['_start']) * 1000, 3)
+    }
+    if data:
+        event.update(data)
+    profile['events'].append(event)
+
+
+def profile_payload(profile):
+    if profile is None:
+        return None
+    payload = dict(profile)
+    del payload['_start']
+    del payload['_time']
+    return payload
+
+
+def preload_scrollback(w, config, tmux_data, profile):
     if os.environ.get('KITTY_SCROLLBACK_NVIM_DISABLE_PRELOAD') == '1':
         return None
-    if config != 'ksb_builtin_get_text_all' or tmux_data:
+    if (not preload_scrollback_as_ansi(config)
+            and not preload_scrollback_as_plain(config)) or tmux_data:
         return None
     path = None
     try:
-        text = w.as_text(as_ansi=True, add_history=True, add_wrap_markers=True)
+        profile_record(profile, 'before_as_text')
+        text = w.as_text(as_ansi=preload_scrollback_as_ansi(config),
+                         add_history=True,
+                         add_wrap_markers=True)
+        profile_record(profile, 'after_as_text', {'text_chars': len(text)})
+        profile_record(profile, 'before_payload_transform')
+        if preload_scrollback_as_plain(config):
+            payload = scrollback_text_to_plain_payload(text)
+        else:
+            payload = scrollback_text_to_term_payload(text)
+        profile_record(profile, 'after_payload_transform',
+                       {'payload_chars': len(payload)})
+        profile_record(profile, 'before_payload_write')
         with tempfile.NamedTemporaryFile('w',
                                          encoding='utf-8',
                                          newline='',
                                          prefix='ksb-scrollback-',
                                          delete=False) as f:
             path = f.name
-            f.write(scrollback_text_to_term_payload(text))
+            f.write(payload)
+        profile_record(profile, 'after_payload_write', {
+            'path': path,
+            'bytes': os.path.getsize(path)
+        })
         w.clear_selection()
         return path
     except Exception:
@@ -204,6 +281,8 @@ def handle_result(args: List[str],
                   result: str,
                   target_window_id: int,
                   boss: Boss) -> None:
+    profile = profile_start(args)
+    profile_record(profile, 'python_start')
     del args[0]
     w = boss.window_id_map.get(target_window_id)
     if w is not None:
@@ -219,6 +298,10 @@ def handle_result(args: List[str],
         cwd = parse_cwd(args, w.child.foreground_cwd)
         env = parse_env(args)
         tmux_data = parse_tmux_env(env)
+        profile_record(profile, 'after_parse_config_env', {
+            'config': config,
+            'tmux': bool(tmux_data)
+        })
         kitty_data_str = pipe_data(w,
                                    target_window_id,
                                    config,
@@ -241,9 +324,13 @@ def handle_result(args: List[str],
 
         try:
             kitty_data_str['preloaded_scrollback_path'] = preload_scrollback(
-                w, config, tmux_data)
+                w, config, tmux_data, profile)
         except Exception as e:
             kitty_data_str['preloaded_scrollback_error'] = str(e)
+        profile_record(profile, 'before_remote_launch')
+        profile_data = profile_payload(profile)
+        if profile_data:
+            kitty_data_str['kitty_scrollback_profile'] = profile_data
         kitty_data = json.dumps(kitty_data_str)
 
         kitty_args = (

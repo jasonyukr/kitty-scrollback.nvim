@@ -24,6 +24,8 @@ local ksb_health
 local ksb_backport
 ---@module 'kitty-scrollback.configs.defaults'
 local ksb_configs_defaults
+---@module 'kitty-scrollback.profile'
+local ksb_profile
 
 local M = {}
 
@@ -59,6 +61,7 @@ local M = {}
 ---@field tmux KsbTmuxData|nil tmux data
 ---@field shell string kitty shell program to execute
 ---@field preloaded_scrollback_path string|nil temp file containing preloaded scrollback payload
+---@field preloaded_scrollback_error string|nil error from preloading scrollback payload
 
 ---@class KsbPrivate
 ---@field orig_columns number
@@ -227,6 +230,7 @@ local function load_requires()
   ksb_health = require('kitty-scrollback.health')
   ksb_backport = require('kitty-scrollback.backport')
   ksb_configs_defaults = require('kitty-scrollback.configs.defaults')
+  ksb_profile = require('kitty-scrollback.profile')
 end
 
 local function config_to_opts(config)
@@ -245,6 +249,10 @@ M.setup = function(kitty_data_str)
   end, { ['repeat'] = 80 }) -- 2 seconds
 
   p.kitty_data = vim.fn.json_decode(kitty_data_str)
+  vim.opt.runtimepath:append(p.kitty_data.ksb_dir)
+  ksb_profile = require('kitty-scrollback.profile')
+  ksb_profile.setup(p.kitty_data.kitty_scrollback_profile)
+  ksb_profile.record({ name = 'lua_setup_start' })
   load_requires() -- must be after p.kitty_data initialized
 
   -- if a config at the first index found, that will be applied to all configurations regardless of prefix
@@ -386,6 +394,7 @@ end
 
 ---Launch kitty-scrollack.nvim with configured scrollback buffer
 M.launch = function()
+  ksb_profile.record({ name = 'launch_start' })
   vim.schedule(function()
     local buf_lines = vim.api.nvim_buf_get_lines(0, 0, 1, false)
     local no_buf_content = vim.api.nvim_buf_line_count(0) == 1 and buf_lines[1] == ''
@@ -402,10 +411,15 @@ M.launch = function()
     ksb_autocmds.load_autocmds()
 
     vim.schedule(function()
-      ksb_kitty_cmds.get_text_term(get_text_opts(), function()
-        ksb_kitty_cmds.signal_winchanged_to_kitty_child_process()
+      local text_opts = get_text_opts()
+      local function on_scrollback_ready(_, _, event)
+        if event ~= 'plain_scrollback' then
+          ksb_kitty_cmds.signal_winchanged_to_kitty_child_process()
+        end
         if opts.kitty_get_text.extent == 'screen' or opts.kitty_get_text.extent == 'all' or opts.kitty_get_text.extent == 'bottom' then
+          ksb_profile.record({ name = 'before_cursor_position' })
           set_cursor_position(p.kitty_data)
+          ksb_profile.record({ name = 'after_cursor_position' })
         end
         ksb_win.show_status_window()
 
@@ -422,25 +436,27 @@ M.launch = function()
           }
         )
 
-        local alternate_file_bufnr = vim.fn.bufnr('#')
-        if alternate_file_bufnr > 0 and alternate_file_bufnr ~= p.bufid then
-          vim.api.nvim_buf_delete(alternate_file_bufnr, { force = true }) -- delete alt buffer after rename
-        else
-          ksb_util.display_error({
-            [[- ERROR alternate file not found]],
-            [[  `vim.fn.bufnr('#')` is ]]
-              .. alternate_file_bufnr
-              .. [[. Most likely `]]
-              .. ksb_kitty_cmds.open_term_command
-              .. [[` failed. ]],
-            [[  Please report the issue at https://github.com/mikesmithgh/kitty-scrollback.nvim/issues]],
-            [[  and provide the `KittyScrollbackCheckHealth` report.]],
-          })
-          ksb_api.close_kitty_loading_window()
-          if block_input_timer then
-            vim.fn.timer_stop(block_input_timer)
+        if event ~= 'plain_scrollback' then
+          local alternate_file_bufnr = vim.fn.bufnr('#')
+          if alternate_file_bufnr > 0 and alternate_file_bufnr ~= p.bufid then
+            vim.api.nvim_buf_delete(alternate_file_bufnr, { force = true }) -- delete alt buffer after rename
+          else
+            ksb_util.display_error({
+              [[- ERROR alternate file not found]],
+              [[  `vim.fn.bufnr('#')` is ]]
+                .. alternate_file_bufnr
+                .. [[. Most likely `]]
+                .. ksb_kitty_cmds.open_term_command
+                .. [[` failed. ]],
+              [[  Please report the issue at https://github.com/mikesmithgh/kitty-scrollback.nvim/issues]],
+              [[  and provide the `KittyScrollbackCheckHealth` report.]],
+            })
+            ksb_api.close_kitty_loading_window()
+            if block_input_timer then
+              vim.fn.timer_stop(block_input_timer)
+            end
+            return
           end
-          return
         end
 
         if opts.restore_options then
@@ -479,7 +495,22 @@ M.launch = function()
         if block_input_timer then
           vim.fn.timer_stop(block_input_timer)
         end
-      end)
+        ksb_profile.record({ name = 'ready_callback_complete' })
+        ksb_profile.flush({
+          config = p.kitty_data.kitty_scrollback_config,
+          preloaded = type(p.kitty_data.preloaded_scrollback_path) == 'string',
+          render_strategy = opts.render_strategy,
+        })
+      end
+
+      if opts.render_strategy == 'plain' then
+        ksb_profile.record({ name = 'before_get_text_plain' })
+        if ksb_kitty_cmds.get_text_plain(text_opts, on_scrollback_ready) then
+          return
+        end
+      end
+      ksb_profile.record({ name = 'before_get_text_term' })
+      ksb_kitty_cmds.get_text_term(text_opts, on_scrollback_ready)
     end)
     if
       opts.callbacks

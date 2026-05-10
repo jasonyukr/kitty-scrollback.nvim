@@ -55,6 +55,7 @@
 ---@field status_window KsbStatusWindowOpts|nil options for status window indicating that kitty-scrollback.nvim is ready
 ---@field paste_window KsbPasteWindowOpts|nil  options for paste window that sends commands to Kitty
 ---@field kitty_get_text KsbKittyGetText|nil options passed to get-text when reading scrollback buffer, see `kitty @ get-text --help`
+---@field render_strategy string|nil | 'terminal' | 'plain' How scrollback content is rendered. terminal preserves ANSI sequences in a terminal buffer; plain loads text into a normal buffer.
 ---@field checkhealth boolean|nil if true execute :checkhealth kitty-scrollback and skip setup
 ---@field visual_selection_highlight_mode string | 'darken' | 'kitty' | 'nvim' | 'reverse' | nil
 local default_opts = {
@@ -88,6 +89,7 @@ local default_opts = {
     extent = 'all',
     clear_selection = true,
   },
+  render_strategy = 'terminal',
   checkhealth = false,
   visual_selection_highlight_mode = 'darken',
 }

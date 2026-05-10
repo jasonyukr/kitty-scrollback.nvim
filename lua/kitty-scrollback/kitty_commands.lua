@@ -1,6 +1,7 @@
 ---@mod kitty-scrollback.kitty_commands
 local ksb_tmux = require('kitty-scrollback.tmux_commands')
 local ksb_util = require('kitty-scrollback.util')
+local ksb_profile = require('kitty-scrollback.profile')
 local M = {}
 
 ---@type KsbPrivate
@@ -83,7 +84,41 @@ end
 
 ---@param get_text_opts KsbKittyGetTextArguments
 ---@param on_exit_cb function
+M.get_text_plain = function(get_text_opts, on_exit_cb)
+  ksb_profile.record({ name = 'get_text_plain_start' })
+  local path = p.kitty_data.preloaded_scrollback_path
+  if
+    p.kitty_data.tmux
+    and next(p.kitty_data.tmux)
+    or type(path) ~= 'string'
+    or path == ''
+    or vim.fn.filereadable(path) ~= 1
+    or get_text_opts.extent ~= 'all'
+    or get_text_opts.ansi
+    or not get_text_opts.clear_selection
+    or not get_text_opts.add_wrap_markers
+  then
+    ksb_profile.record({ name = 'plain_scrollback_fallback' })
+    cleanup_preloaded_scrollback()
+    return false
+  end
+
+  ksb_profile.record({ name = 'plain_scrollback_selected' })
+  local ok, lines = pcall(vim.fn.readfile, path)
+  cleanup_preloaded_scrollback()
+  if not ok then
+    ksb_profile.record({ name = 'plain_scrollback_read_error', error = lines })
+    return false
+  end
+  vim.api.nvim_buf_set_lines(p.bufid, 0, -1, false, lines)
+  on_exit_cb(nil, 0, 'plain_scrollback')
+  return true
+end
+
+---@param get_text_opts KsbKittyGetTextArguments
+---@param on_exit_cb function
 M.get_text_term = function(get_text_opts, on_exit_cb)
+  ksb_profile.record({ name = 'get_text_term_start' })
   local scrollback_cmd, full_cmd = get_scrollback_cmd(get_text_opts)
   local stdout
   local stderr
@@ -102,9 +137,13 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
     if can_use_preloaded_scrollback(get_text_opts, preloaded_scrollback_path) then
       full_cmd = 'cat < ' .. vim.fn.shellescape(preloaded_scrollback_path) .. ' && printf "\x1b]2;"'
       using_preloaded_scrollback = true
+      ksb_profile.record({ name = 'preloaded_scrollback_selected' })
     else
+      ksb_profile.record({ name = 'preloaded_scrollback_fallback' })
       cleanup_preloaded_scrollback()
     end
+  else
+    ksb_profile.record({ name = 'preloaded_scrollback_fallback' })
   end
 
   -- set the shell used to sh to avoid imcompatabiliies with other shells (e.g., nushell, fish, etc)
@@ -121,6 +160,13 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
       stderr = data
     end,
     on_exit = function(id, exit_code, event)
+      ksb_profile.record({
+        name = 'terminal_job_exit',
+        id = id,
+        exit_code = exit_code,
+        event = event,
+        preloaded = using_preloaded_scrollback,
+      })
       if using_preloaded_scrollback then
         cleanup_preloaded_scrollback()
       end
@@ -140,6 +186,11 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
             stdout = stdout and table.concat(stdout, '\n') or nil,
             stderr = stderr and table.concat(stderr, '\n') or nil,
           }, error_header)
+          ksb_profile.flush({
+            config = p.kitty_data.kitty_scrollback_config,
+            preloaded = using_preloaded_scrollback,
+            error = 'preloaded cat exit_code ~= 0',
+          })
         end
         return
       end
@@ -194,6 +245,11 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
           stdout = out,
           stderr = stderr and table.concat(stderr, '\n') or nil,
         }, error_header)
+        ksb_profile.flush({
+          config = p.kitty_data.kitty_scrollback_config,
+          preloaded = using_preloaded_scrollback,
+          error = 'open_term_fn() :: exit_code ~= 0',
+        })
       end
     end,
   }
@@ -201,6 +257,7 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
     open_term_options.term = true
   end
 
+  ksb_profile.record({ name = 'terminal_job_start', command = M.open_term_command })
   local success, error = pcall(open_term_fn, full_cmd, open_term_options)
   if not success then
     if using_preloaded_scrollback then
@@ -210,6 +267,13 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
       entrypoint = 'open_term_fn() :: pcall(open_term_fn) error returned',
       stderr = error or nil,
     }, error_header)
+    ksb_profile.flush({
+      config = p.kitty_data.kitty_scrollback_config,
+      preloaded = using_preloaded_scrollback,
+      error = 'open_term_fn() :: pcall(open_term_fn) error returned',
+    })
+  else
+    ksb_profile.record({ name = 'terminal_job_started', id = error })
   end
 
   -- restore the original shell after processing
