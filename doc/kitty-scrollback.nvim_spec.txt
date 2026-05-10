@@ -25,22 +25,23 @@ KsbTmuxData                                *kitty-scrollback.launch.KsbTmuxData*
 KsbKittyData                              *kitty-scrollback.launch.KsbKittyData*
 
     Fields: ~
-        {scrolled_by}                (integer)          the number of lines currently scrolled in kitty
-        {cursor_x}                   (integer)          position of the cusor in the column in kitty
-        {cursor_y}                   (integer)          position of the cursor in the row in kitty
-        {lines}                      (integer)          the number of rows of the screen in kitty
-        {columns}                    (integer)          the number of columns of the screen in kitty
-        {window_id}                  (integer)          the id of the window to get scrollback text
-        {window_title}               (string)           the title of the window to get scrollback text
-        {ksb_dir}                    (string)           the base runtime path of kitty-scrollback.nvim
-        {kitty_scrollback_config}    (string)           the config name of user config options
-        {kitty_opts}                 (KsbKittyOpts)     relevant kitty configuration values
-        {kitty_config_dir}           (string)           kitty configuration directory path
-        {kitty_version}              (table)            kitty version
-        {kitty_path}                 (string)           kitty executable path
-        {tmux}                       (KsbTmuxData|nil)  tmux data
-        {shell}                      (string)           kitty shell program to execute
-        {preloaded_scrollback_path}  (string|nil)       temp file containing preloaded scrollback payload
+        {scrolled_by}                 (integer)          the number of lines currently scrolled in kitty
+        {cursor_x}                    (integer)          position of the cusor in the column in kitty
+        {cursor_y}                    (integer)          position of the cursor in the row in kitty
+        {lines}                       (integer)          the number of rows of the screen in kitty
+        {columns}                     (integer)          the number of columns of the screen in kitty
+        {window_id}                   (integer)          the id of the window to get scrollback text
+        {window_title}                (string)           the title of the window to get scrollback text
+        {ksb_dir}                     (string)           the base runtime path of kitty-scrollback.nvim
+        {kitty_scrollback_config}     (string)           the config name of user config options
+        {kitty_opts}                  (KsbKittyOpts)     relevant kitty configuration values
+        {kitty_config_dir}            (string)           kitty configuration directory path
+        {kitty_version}               (table)            kitty version
+        {kitty_path}                  (string)           kitty executable path
+        {tmux}                        (KsbTmuxData|nil)  tmux data
+        {shell}                       (string)           kitty shell program to execute
+        {preloaded_scrollback_path}   (string|nil)       temp file containing preloaded scrollback payload
+        {preloaded_scrollback_error}  (string|nil)       error from preloading scrollback payload
 
 
 KsbPrivate                                  *kitty-scrollback.launch.KsbPrivate*
@@ -200,6 +201,7 @@ KsbOpts                                                   *default_opts.KsbOpts*
         {status_window}                    (KsbStatusWindowOpts|nil)                       options for status window indicating that kitty-scrollback.nvim is ready
         {paste_window}                     (KsbPasteWindowOpts|nil)                        options for paste window that sends commands to Kitty
         {kitty_get_text}                   (KsbKittyGetText|nil)                           options passed to get-text when reading scrollback buffer, see `kitty @ get-text --help`
+        {render_strategy}                  (string|nil|"terminal"|"plain")                 How scrollback content is rendered. terminal preserves ANSI sequences in a terminal buffer; plain loads text into a normal buffer.
         {checkhealth}                      (boolean|nil)                                   if true execute :checkhealth kitty-scrollback and skip setup
         {visual_selection_highlight_mode}  (string|"darken"|"kitty"|"nvim"|"reverse"|nil)
 
