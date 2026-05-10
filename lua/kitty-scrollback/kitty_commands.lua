@@ -65,6 +65,63 @@ end
 
 M.open_term_command = vim.fn.has('nvim-0.11') <= 0 and 'termopen' or 'jobstart'
 
+local function cleanup_preloaded_scrollback()
+  local path = p.kitty_data.preloaded_scrollback_path
+  if type(path) == 'string' and path ~= '' then
+    pcall(os.remove, path)
+    p.kitty_data.preloaded_scrollback_path = nil
+  end
+end
+
+---@param get_text_opts KsbKittyGetTextArguments
+local function can_use_preloaded_scrollback(get_text_opts)
+  return not (p.kitty_data.tmux and next(p.kitty_data.tmux))
+    and vim.api.nvim_open_term
+    and get_text_opts.ansi
+    and get_text_opts.clear_selection
+    and get_text_opts.add_wrap_markers
+    and get_text_opts.extent == 'all'
+end
+
+local function read_preloaded_scrollback(path)
+  local f = io.open(path, 'rb')
+  if not f then
+    return nil
+  end
+
+  local chunks = {}
+  while true do
+    local chunk = f:read(1024 * 1024)
+    if not chunk then
+      break
+    end
+    if #chunk > 0 then
+      chunks[#chunks + 1] = chunk
+    end
+  end
+  f:close()
+  return chunks
+end
+
+local function open_preloaded_scrollback(path)
+  local chunks = read_preloaded_scrollback(path)
+  cleanup_preloaded_scrollback()
+  if not chunks then
+    return false
+  end
+
+  local ok, term_or_error = pcall(vim.api.nvim_open_term, p.bufid, {})
+  if not ok then
+    return false
+  end
+
+  vim.api.nvim_buf_set_name(p.bufid, 'term://kitty-scrollback.nvim:kitty-scrollback.nvim')
+  for _, chunk in ipairs(chunks) do
+    vim.api.nvim_chan_send(term_or_error, chunk)
+  end
+  return term_or_error
+end
+
 ---@param get_text_opts KsbKittyGetTextArguments
 ---@param on_exit_cb function
 M.get_text_term = function(get_text_opts, on_exit_cb)
@@ -79,6 +136,22 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
   -- defer is used as a timing workaround because this is expected to be called right before
   -- opening the terminal
   p.orig_columns = defer_resize_term(300)
+
+  local preloaded_scrollback_path = p.kitty_data.preloaded_scrollback_path
+  if
+    can_use_preloaded_scrollback(get_text_opts)
+    and type(preloaded_scrollback_path) == 'string'
+    and preloaded_scrollback_path ~= ''
+  then
+    local term_chan = open_preloaded_scrollback(preloaded_scrollback_path)
+    if term_chan then
+      vim.o.columns = p.orig_columns
+      on_exit_cb(term_chan, 0, 'exit')
+      return
+    end
+  elseif type(preloaded_scrollback_path) == 'string' and preloaded_scrollback_path ~= '' then
+    cleanup_preloaded_scrollback()
+  end
 
   -- set the shell used to sh to avoid imcompatabiliies with other shells (e.g., nushell, fish, etc)
   vim.o.shell = 'sh'

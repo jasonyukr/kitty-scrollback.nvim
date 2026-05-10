@@ -58,6 +58,7 @@ local M = {}
 ---@field kitty_path string kitty executable path
 ---@field tmux KsbTmuxData|nil tmux data
 ---@field shell string kitty shell program to execute
+---@field preloaded_scrollback_path string|nil temp file containing preloaded scrollback payload
 
 ---@class KsbPrivate
 ---@field orig_columns number
@@ -337,24 +338,30 @@ end
 ---@class KsbKittyGetTextArguments
 ---@field kitty string kitty args for get-text
 ---@field tmux string tmux args for capture-pane
+---@field ansi boolean
+---@field clear_selection boolean
+---@field add_wrap_markers boolean
+---@field extent string
 
 ---@return KsbKittyGetTextArguments
 local function get_text_opts()
   local ansi = '--ansi'
   local tmux_ansi = '-e'
-  if not opts.kitty_get_text.ansi then
+  local ansi_enabled = opts.kitty_get_text.ansi
+  if not ansi_enabled then
     ansi = ''
     tmux_ansi = ''
   end
 
   local clear_selection = '--clear-selection'
-  if not opts.kitty_get_text.clear_selection then
+  local clear_selection_enabled = opts.kitty_get_text.clear_selection
+  if not clear_selection_enabled then
     clear_selection = ''
   end
 
   local extent = '--extent=all'
   local tmux_extent = '-S - -E -'
-  local extent_opt = opts.kitty_get_text.extent
+  local extent_opt = opts.kitty_get_text.extent or 'all'
   if extent_opt then
     extent = '--extent=' .. extent_opt
     if extent_opt == 'screen' then
@@ -370,6 +377,10 @@ local function get_text_opts()
   return {
     kitty = ansi .. ' ' .. clear_selection .. ' ' .. add_wrap_markers .. ' ' .. extent,
     tmux = tmux_ansi .. ' ' .. tmux_add_wrap_markers .. ' ' .. tmux_extent,
+    ansi = ansi_enabled,
+    clear_selection = clear_selection_enabled,
+    add_wrap_markers = true,
+    extent = extent_opt,
   }
 end
 
