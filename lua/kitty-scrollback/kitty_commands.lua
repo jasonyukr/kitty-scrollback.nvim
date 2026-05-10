@@ -75,12 +75,7 @@ end
 
 ---@param get_text_opts KsbKittyGetTextArguments
 local function can_use_preloaded_scrollback(get_text_opts)
-  return not (p.kitty_data.tmux and next(p.kitty_data.tmux))
-    and vim.api.nvim_open_term
-    and get_text_opts.ansi
-    and get_text_opts.clear_selection
-    and get_text_opts.add_wrap_markers
-    and get_text_opts.extent == 'all'
+  return false
 end
 
 local function read_preloaded_scrollback(path)
