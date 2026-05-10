@@ -71,47 +71,14 @@ local function cleanup_preloaded_scrollback()
 end
 
 ---@param get_text_opts KsbKittyGetTextArguments
-local function can_use_preloaded_scrollback(get_text_opts)
-  return false
-end
-
-local function read_preloaded_scrollback(path)
-  local f = io.open(path, 'rb')
-  if not f then
-    return nil
-  end
-
-  local chunks = {}
-  while true do
-    local chunk = f:read(1024 * 1024)
-    if not chunk then
-      break
-    end
-    if #chunk > 0 then
-      chunks[#chunks + 1] = chunk
-    end
-  end
-  f:close()
-  return chunks
-end
-
-local function open_preloaded_scrollback(path)
-  local chunks = read_preloaded_scrollback(path)
-  cleanup_preloaded_scrollback()
-  if not chunks then
-    return false
-  end
-
-  local ok, term_or_error = pcall(vim.api.nvim_open_term, p.bufid, {})
-  if not ok then
-    return false
-  end
-
-  vim.api.nvim_buf_set_name(p.bufid, 'term://kitty-scrollback.nvim:kitty-scrollback.nvim')
-  for _, chunk in ipairs(chunks) do
-    vim.api.nvim_chan_send(term_or_error, chunk)
-  end
-  return term_or_error
+---@param path string
+local function can_use_preloaded_scrollback(get_text_opts, path)
+  return not (p.kitty_data.tmux and next(p.kitty_data.tmux))
+    and vim.fn.filereadable(path) == 1
+    and get_text_opts.extent == 'all'
+    and get_text_opts.ansi
+    and get_text_opts.clear_selection
+    and get_text_opts.add_wrap_markers
 end
 
 ---@param get_text_opts KsbKittyGetTextArguments
@@ -130,19 +97,14 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
   p.orig_columns = defer_resize_term(300)
 
   local preloaded_scrollback_path = p.kitty_data.preloaded_scrollback_path
-  if
-    can_use_preloaded_scrollback(get_text_opts)
-    and type(preloaded_scrollback_path) == 'string'
-    and preloaded_scrollback_path ~= ''
-  then
-    local term_chan = open_preloaded_scrollback(preloaded_scrollback_path)
-    if term_chan then
-      vim.o.columns = p.orig_columns
-      on_exit_cb(term_chan, 0, 'exit')
-      return
+  local using_preloaded_scrollback = false
+  if type(preloaded_scrollback_path) == 'string' and preloaded_scrollback_path ~= '' then
+    if can_use_preloaded_scrollback(get_text_opts, preloaded_scrollback_path) then
+      full_cmd = 'cat < ' .. vim.fn.shellescape(preloaded_scrollback_path) .. ' && printf "\x1b]2;"'
+      using_preloaded_scrollback = true
+    else
+      cleanup_preloaded_scrollback()
     end
-  elseif type(preloaded_scrollback_path) == 'string' and preloaded_scrollback_path ~= '' then
-    cleanup_preloaded_scrollback()
   end
 
   -- set the shell used to sh to avoid imcompatabiliies with other shells (e.g., nushell, fish, etc)
@@ -159,11 +121,28 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
       stderr = data
     end,
     on_exit = function(id, exit_code, event)
+      if using_preloaded_scrollback then
+        cleanup_preloaded_scrollback()
+      end
       -- NOTE(#58): nvim v0.9 support
       -- vim.o.columns is resized automatically in nvim v0.9.1 when we trigger kitty so send a SIGWINCH signal
       -- vim.o.columns is explicitly set to resize appropriately on v0.9.0
       -- see https://github.com/neovim/neovim/pull/23503
       vim.o.columns = p.orig_columns
+      if using_preloaded_scrollback then
+        if exit_code == 0 then
+          on_exit_cb(id, exit_code, event)
+        else
+          ksb_util.display_cmd_error(full_cmd, {
+            entrypoint = 'open_term_fn() :: preloaded cat exit_code ~= 0',
+            code = exit_code,
+            channel_id = id,
+            stdout = stdout and table.concat(stdout, '\n') or nil,
+            stderr = stderr and table.concat(stderr, '\n') or nil,
+          }, error_header)
+        end
+        return
+      end
       if exit_code == 0 then
         -- no need to check allow_remote_control or dev/tty because earlier commands would have reported the error
         if #stdout >= 2 then
@@ -224,6 +203,9 @@ M.get_text_term = function(get_text_opts, on_exit_cb)
 
   local success, error = pcall(open_term_fn, full_cmd, open_term_options)
   if not success then
+    if using_preloaded_scrollback then
+      cleanup_preloaded_scrollback()
+    end
     ksb_util.display_cmd_error(full_cmd, {
       entrypoint = 'open_term_fn() :: pcall(open_term_fn) error returned',
       stderr = error or nil,

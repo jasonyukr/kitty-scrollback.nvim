@@ -174,21 +174,29 @@ def scrollback_text_to_term_payload(text):
 
 
 def preload_scrollback(w, config, tmux_data):
-    if os.environ.get('KITTY_SCROLLBACK_NVIM_ENABLE_PRELOAD') != '1':
+    if os.environ.get('KITTY_SCROLLBACK_NVIM_DISABLE_PRELOAD') == '1':
         return None
     if config != 'ksb_builtin_get_text_all' or tmux_data:
         return None
-    with tempfile.NamedTemporaryFile('w',
-                                     encoding='utf-8',
-                                     newline='',
-                                     prefix='ksb-scrollback-',
-                                     delete=False) as f:
-        f.write(
-            scrollback_text_to_term_payload(
-                w.as_text(as_ansi=True,
-                          add_history=True,
-                          add_wrap_markers=True)))
-        return f.name
+    path = None
+    try:
+        text = w.as_text(as_ansi=True, add_history=True, add_wrap_markers=True)
+        with tempfile.NamedTemporaryFile('w',
+                                         encoding='utf-8',
+                                         newline='',
+                                         prefix='ksb-scrollback-',
+                                         delete=False) as f:
+            path = f.name
+            f.write(scrollback_text_to_term_payload(text))
+        w.clear_selection()
+        return path
+    except Exception:
+        if path:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+        raise
 
 
 @result_handler(type_of_input=None, no_ui=True, has_ready_notification=False)
