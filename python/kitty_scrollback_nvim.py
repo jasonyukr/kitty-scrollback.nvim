@@ -11,6 +11,7 @@ from kitty.shell_integration import get_effective_ksi_env_var
 import json
 import os
 import inspect
+import tempfile
 
 ksb_dir = os.path.dirname(
     os.path.dirname(os.path.abspath(inspect.getfile(lambda: None))))
@@ -161,6 +162,33 @@ def parse_cwd(args, default_cwd):
     return ()
 
 
+def scrollback_text_to_term_payload(text):
+    payload = []
+    for line in text.splitlines(True):
+        line = line.replace('\r', '')
+        if line.endswith('\n'):
+            payload.append(line[:-1] + '\x1b[0m\n')
+        else:
+            payload.append(line + '\x1b[0m')
+    return ''.join(payload)
+
+
+def preload_scrollback(w, config, tmux_data):
+    if config != 'ksb_builtin_get_text_all' or tmux_data:
+        return None
+    with tempfile.NamedTemporaryFile('w',
+                                     encoding='utf-8',
+                                     newline='',
+                                     prefix='ksb-scrollback-',
+                                     delete=False) as f:
+        f.write(
+            scrollback_text_to_term_payload(
+                w.as_text(as_ansi=True,
+                          add_history=True,
+                          add_wrap_markers=True)))
+        return f.name
+
+
 @result_handler(type_of_input=None, no_ui=True, has_ready_notification=False)
 def handle_result(args: List[str],
                   result: str,
@@ -186,7 +214,6 @@ def handle_result(args: List[str],
                                    config,
                                    kitty_path,
                                    tmux_data)
-        kitty_data = json.dumps(kitty_data_str)
 
         if w.title.startswith('kitty-scrollback.nvim'):
             print(
@@ -194,6 +221,20 @@ def handle_result(args: List[str],
                 'starts with "kitty-scrollback.nvim"')
             print(json.dumps(kitty_data_str, indent=2))
             return
+
+        nvim_path = which('nvim')
+        if not nvim_path:
+            boss.show_error(
+                cmd_not_found_title.substitute(cmd='nvim'),
+                cmd_not_found_error.substitute(cmd='nvim') + open_an_issue_msg)
+            return
+
+        try:
+            kitty_data_str['preloaded_scrollback_path'] = preload_scrollback(
+                w, config, tmux_data)
+        except Exception as e:
+            kitty_data_str['preloaded_scrollback_error'] = str(e)
+        kitty_data = json.dumps(kitty_data_str)
 
         kitty_args = (
             '--copy-env',
@@ -217,13 +258,6 @@ def handle_result(args: List[str],
             f'  require([[kitty-scrollback.launch]]).setup_and_launch([[{kitty_data}]])'
             ' end,'
             ' })')
-
-        nvim_path = which('nvim')
-        if not nvim_path:
-            boss.show_error(
-                cmd_not_found_title.substitute(cmd='nvim'),
-                cmd_not_found_error.substitute(cmd='nvim') + open_an_issue_msg)
-            return
 
         cmd = ('launch', ) + kitty_args + (nvim_path, ) + nvim_args
         boss.call_remote_control(w, cmd)
