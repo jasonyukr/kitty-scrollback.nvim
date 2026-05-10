@@ -174,6 +174,8 @@ def scrollback_text_to_term_payload(text):
 
 
 def preload_scrollback(w, config, tmux_data):
+    if os.environ.get('KITTY_SCROLLBACK_NVIM_ENABLE_PRELOAD') != '1':
+        return None
     if config != 'ksb_builtin_get_text_all' or tmux_data:
         return None
     with tempfile.NamedTemporaryFile('w',
