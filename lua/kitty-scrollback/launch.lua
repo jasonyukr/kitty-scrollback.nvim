@@ -423,7 +423,7 @@ M.launch = function()
         )
 
         local alternate_file_bufnr = vim.fn.bufnr('#')
-        if alternate_file_bufnr > 0 then
+        if alternate_file_bufnr > 0 and alternate_file_bufnr ~= p.bufid then
           vim.api.nvim_buf_delete(alternate_file_bufnr, { force = true }) -- delete alt buffer after rename
         else
           ksb_util.display_error({
