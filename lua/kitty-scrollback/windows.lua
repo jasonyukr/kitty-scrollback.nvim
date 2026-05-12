@@ -77,7 +77,7 @@ M.open_paste_window = function(start_insert)
 
   if not p.pos then
     if
-      (opts.kitty_get_text.extent == 'screen' or opts.kitty_get_text.extent == 'all' or opts.kitty_get_text.extent == 'bottom')
+      (opts.kitty_get_text.extent == 'screen' or opts.kitty_get_text.extent == 'all')
       and not ksb_util.command_line_editing_mode
     then
       vim.notify(

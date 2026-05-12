@@ -416,7 +416,7 @@ M.launch = function()
         if event ~= 'plain_scrollback' then
           ksb_kitty_cmds.signal_winchanged_to_kitty_child_process()
         end
-        if opts.kitty_get_text.extent == 'screen' or opts.kitty_get_text.extent == 'all' or opts.kitty_get_text.extent == 'bottom' then
+        if opts.kitty_get_text.extent == 'screen' or opts.kitty_get_text.extent == 'all' then
           ksb_profile.record({ name = 'before_cursor_position' })
           set_cursor_position(p.kitty_data)
           ksb_profile.record({ name = 'after_cursor_position' })
